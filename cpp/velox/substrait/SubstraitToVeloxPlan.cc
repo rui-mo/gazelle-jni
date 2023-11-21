@@ -94,6 +94,7 @@ std::string getMax<std::string>() {
 
 // Substrait function names.
 const std::string sIsNotNull = "is_not_null";
+const std::string sIsNull = "is_null";
 const std::string sGte = "gte";
 const std::string sGt = "gt";
 const std::string sLte = "lte";
@@ -1270,15 +1271,15 @@ bool SubstraitToVeloxPlanConverter::childrenFunctionsOnSameField(
   return false;
 }
 
-bool SubstraitToVeloxPlanConverter::canPushdownCommonFunction(
+bool SubstraitToVeloxPlanConverter::canPushdownFunction(
     const ::substrait::Expression_ScalarFunction& scalarFunction,
     const std::string& filterName,
     uint32_t& fieldIdx) {
   // Condtions can be pushed down.
-  static const std::unordered_set<std::string> supportedCommonFunctions = {sIsNotNull, sGte, sGt, sLte, sLt, sEqual};
+  static const std::unordered_set<std::string> supportedFunctions = {sIsNotNull, sIsNull, sGte, sGt, sLte, sLt, sEqual};
 
   bool canPushdown = false;
-  if (supportedCommonFunctions.find(filterName) != supportedCommonFunctions.end() &&
+  if (supportedFunctions.find(filterName) != supportedFunctions.end() &&
       fieldOrWithLiteral(scalarFunction.arguments(), fieldIdx)) {
     // The arg should be field or field with literal.
     canPushdown = true;
@@ -1412,7 +1413,7 @@ void SubstraitToVeloxPlanConverter::separateFilters(
     } else {
       // Check if the condition is supported to be pushed down.
       uint32_t fieldIdx;
-      if (canPushdownCommonFunction(scalarFunction, filterName, fieldIdx) &&
+      if (canPushdownFunction(scalarFunction, filterName, fieldIdx) &&
           rangeRecorders.at(fieldIdx).setCertainRangeForFunction(filterName)) {
         subfieldFunctions.emplace_back(scalarFunction);
       } else {
@@ -1460,6 +1461,12 @@ bool SubstraitToVeloxPlanConverter::RangeRecorder::setCertainRangeForFunction(
       // Is not null can always coexist with the other range.
       return true;
     }
+  } else if (functionName == sIsNull) {
+    if (reverse) {
+      return setCertainRangeForFunction(sIsNotNull, false, forOrRelation);
+    } else {
+      return setIsNull();
+    }
   } else {
     return false;
   }
@@ -1472,9 +1479,14 @@ void SubstraitToVeloxPlanConverter::setColumnFilterInfo(
     bool reverse) {
   if (filterName == sIsNotNull) {
     if (reverse) {
-      VELOX_NYI("Reverse not supported for filter name '{}'", filterName);
+      columnFilterInfo.setNull();
     }
     columnFilterInfo.forbidsNull();
+  } else if (filterName == sIsNull) {
+    if (reverse) {
+      columnFilterInfo.forbidsNull();
+    }
+    columnFilterInfo.setNull();
   } else if (filterName == sGte) {
     if (reverse) {
       columnFilterInfo.setUpper(literalVariant, true);
@@ -1543,11 +1555,11 @@ void SubstraitToVeloxPlanConverter::setFilterInfo(
   static const std::unordered_map<std::string, std::string> functionRevertMap = {
       {sLt, sGt}, {sGt, sLt}, {sGte, sLte}, {sLte, sGte}};
 
-  // Handle "123 < q1" type expression case
+  // Handle the case where literal is before the variable in a binary function, e.g. "123 < q1".
   if (typeCases.size() > 1 && (typeCases[0] == "kLiteral" && typeCases[1] == "kSelection")) {
     auto x = functionRevertMap.find(functionName);
     if (x != functionRevertMap.end()) {
-      // change the function name: lt => gt, gt => lt, gte => lte, lte => gte
+      // Change the function name: lt => gt, gt => lt, gte => lte, lte => gte.
       functionName = x->second;
     }
   }
@@ -1812,6 +1824,7 @@ void SubstraitToVeloxPlanConverter::constructSubfieldFilters(
   }
 
   bool nullAllowed = filterInfo.nullAllowed_;
+  bool isNull = filterInfo.isNull_;
   uint32_t rangeSize = std::max(filterInfo.lowerBounds_.size(), filterInfo.upperBounds_.size());
 
   if constexpr (KIND == facebook::velox::TypeKind::HUGEINT) {
@@ -1819,10 +1832,13 @@ void SubstraitToVeloxPlanConverter::constructSubfieldFilters(
     VELOX_NYI("constructSubfieldFilters not support for HUGEINT type");
   } else if constexpr (KIND == facebook::velox::TypeKind::ARRAY || KIND == facebook::velox::TypeKind::MAP) {
     // Only IsNotNull filter is supported for the above two type kinds now.
-    if (rangeSize == 0 && !nullAllowed) {
-      filters[common::Subfield(inputName)] = std::move(std::make_unique<common::IsNotNull>());
-    } else {
-      VELOX_NYI("constructSubfieldFilters only support IsNotNull for input type '{}'", inputType);
+    if (rangeSize == 0) {
+      if (!nullAllowed) {
+        filters[common::Subfield(inputName)] = std::move(std::make_unique<common::IsNotNull>());
+      } else if (isNull) {
+        filters[common::Subfield(inputName)] = std::move(std::make_unique<common::IsNull>());
+      }
+      VELOX_NYI("constructSubfieldFilters only support IsNotNull and IsNull for input type '{}'", inputType);
     }
   } else {
     using NativeType = typename RangeTraits<KIND>::NativeType;
@@ -1861,9 +1877,12 @@ void SubstraitToVeloxPlanConverter::constructSubfieldFilters(
     }
 
     // Handle null filtering.
-    if (rangeSize == 0 && !nullAllowed) {
-      std::unique_ptr<common::IsNotNull> filter = std::make_unique<common::IsNotNull>();
-      filters[common::Subfield(inputName)] = std::move(filter);
+    if (rangeSize == 0) {
+      if (!nullAllowed) {
+        filters[common::Subfield(inputName)] = std::move(std::make_unique<common::IsNotNull>());
+      } else if (isNull) {
+        filters[common::Subfield(inputName)] = std::move(std::make_unique<common::IsNull>());
+      }
       return;
     }
 
