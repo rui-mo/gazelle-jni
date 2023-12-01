@@ -76,19 +76,6 @@ for arg in "$@"; do
   esac
 done
 
-function apply_compilation_fixes {
-  current_dir=$1
-  velox_home=$2
-  sudo cp ${current_dir}/modify_velox.patch ${velox_home}/
-  sudo cp ${current_dir}/modify_arrow.patch ${velox_home}/third_party/
-  cd ${velox_home}
-  git apply modify_velox.patch
-  if [ $? -ne 0 ]; then
-    echo "Failed to apply compilation fixes to Velox: $?."
-    exit 1
-  fi
-}
-
 function compile {
   TARGET_BUILD_COMMIT=$(git rev-parse --verify HEAD)
 
@@ -154,28 +141,6 @@ function compile {
         cmake --install gtest-build/
       fi
     fi
-  fi
-}
-
-function check_commit {
-  if [ $ENABLE_EP_CACHE == "ON" ]; then
-    if [ -f ${VELOX_HOME}/velox-commit.cache ]; then
-      CACHED_BUILT_COMMIT="$(cat ${VELOX_HOME}/velox-commit.cache)"
-      if [ -n "$CACHED_BUILT_COMMIT" ]; then
-        if [ "$TARGET_BUILD_COMMIT" = "$CACHED_BUILT_COMMIT" ]; then
-          echo "Velox build of commit $TARGET_BUILD_COMMIT was cached."
-          exit 0
-        else
-          echo "Found cached commit $CACHED_BUILT_COMMIT for Velox which is different with target commit $TARGET_BUILD_COMMIT."
-        fi
-      fi
-    fi
-  else
-    git clean -dffx :/
-  fi
-
-  if [ -f ${VELOX_HOME}/velox-commit.cache ]; then
-    rm -f ${VELOX_HOME}/velox-commit.cache
   fi
 }
 
@@ -264,8 +229,6 @@ if [ -z "$TARGET_BUILD_COMMIT" ]; then
 fi
 echo "Target Velox commit: $TARGET_BUILD_COMMIT"
 
-check_commit
-apply_compilation_fixes $CURRENT_DIR $VELOX_HOME
 compile
 
 echo "Successfully built Velox from Source."

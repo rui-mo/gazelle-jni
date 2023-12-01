@@ -28,6 +28,7 @@ BUILD_PROTOBUF=ON
 ENABLE_S3=OFF
 #Set on run gluten on GCS
 ENABLE_GCS=OFF
+ENABLE_EP_CACHE=OFF
 
 OS=`uname -s`
 
@@ -59,6 +60,10 @@ for arg in "$@"; do
     ;;
   --enable_gcs=*)
     ENABLE_GCS=("${arg#*=}")
+    shift # Remove argument name from processing
+    ;;
+  --enable_ep_cache=*)
+    ENABLE_EP_CACHE=("${arg#*=}")
     shift # Remove argument name from processing
     ;;
   *)
@@ -201,6 +206,7 @@ else
   cd $VELOX_SOURCE_DIR
   git checkout $TARGET_BUILD_COMMIT
 fi
+
 #sync submodules
 git submodule sync --recursive
 git submodule update --init --recursive
@@ -267,5 +273,44 @@ else
   echo "Unsupport kernel: $OS"
   exit 1
 fi
+
+function check_commit {
+  if [ $ENABLE_EP_CACHE == "ON" ]; then
+    if [ -f ${VELOX_HOME}/velox-commit.cache ]; then
+      CACHED_BUILT_COMMIT="$(cat ${VELOX_HOME}/velox-commit.cache)"
+      if [ -n "$CACHED_BUILT_COMMIT" ]; then
+        if [ "$TARGET_BUILD_COMMIT" = "$CACHED_BUILT_COMMIT" ]; then
+          echo "Velox build of commit $TARGET_BUILD_COMMIT was cached."
+          exit 0
+        else
+          echo "Found cached commit $CACHED_BUILT_COMMIT for Velox which is different with target commit $TARGET_BUILD_COMMIT."
+        fi
+      fi
+    fi
+  else
+    git clean -dffx :/
+  fi
+
+  if [ -f ${VELOX_HOME}/velox-commit.cache ]; then
+    rm -f ${VELOX_HOME}/velox-commit.cache
+  fi
+}
+
+check_commit
+
+function apply_compilation_fixes {
+  current_dir=$1
+  velox_home=$2
+  sudo cp ${current_dir}/modify_velox.patch ${velox_home}/
+  sudo cp ${current_dir}/modify_arrow.patch ${velox_home}/third_party/
+  cd ${velox_home}
+  git apply modify_velox.patch
+  if [ $? -ne 0 ]; then
+    echo "Failed to apply compilation fixes to Velox: $?."
+    exit 1
+  fi
+}
+
+apply_compilation_fixes $CURRENT_DIR $VELOX_HOME
 
 echo "Velox-get finished."
