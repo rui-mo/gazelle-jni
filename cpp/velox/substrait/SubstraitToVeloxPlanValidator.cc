@@ -69,6 +69,7 @@ const std::unordered_set<std::string> kBlackList = {
     "approx_percentile",
     "get_array_struct_fields",
     "map_from_arrays"};
+
 } // namespace
 
 bool SubstraitToVeloxPlanValidator::parseVeloxType(
@@ -166,7 +167,6 @@ bool SubstraitToVeloxPlanValidator::validateExtractExpr(const std::vector<core::
       LOG_VALIDATION_MSG("Value expected in variant in ExtractExpr.");
       return false;
     }
-
     return true;
   }
   LOG_VALIDATION_MSG("Constant is expected to be the first parameter in extract.");
@@ -214,9 +214,13 @@ bool SubstraitToVeloxPlanValidator::validateScalarFunction(
 
   if (name == "round") {
     return validateRound(scalarFunction, inputType);
-  } else if (name == "extract") {
+  }
+
+  if (name == "extract") {
     return validateExtractExpr(params);
-  } else if (name == "concat") {
+  }
+
+  if (name == "concat") {
     for (const auto& type : types) {
       if (type.find("struct") != std::string::npos || type.find("map") != std::string::npos ||
           type.find("list") != std::string::npos) {
@@ -293,6 +297,7 @@ bool SubstraitToVeloxPlanValidator::validateCast(
     LOG_VALIDATION_MSG("Casting from INTERVAL_YEAR_MONTH is not supported.");
     return false;
   }
+
   switch (input->type()->kind()) {
     case TypeKind::ARRAY:
     case TypeKind::MAP:
@@ -304,8 +309,8 @@ bool SubstraitToVeloxPlanValidator::validateCast(
       LOG_VALIDATION_MSG("Casting from TIMESTAMP is not supported or has incorrect result.");
       return false;
     }
-    default: {
-    }
+    default:
+      break;
   }
   return true;
 }

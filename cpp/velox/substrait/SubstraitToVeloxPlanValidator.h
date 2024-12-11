@@ -88,24 +88,6 @@ class SubstraitToVeloxPlanValidator {
   /// Used to validate whether the computing of this RelRoot is supported.
   bool validate(const ::substrait::RelRoot& relRoot);
 
-  /// A memory pool used for function validation.
-  memory::MemoryPool* pool_;
-
-  /// An execution context used for function validation.
-  core::ExecCtx* execCtx_;
-
-  // Unused customized conf map.
-  std::unordered_map<std::string, std::string> confMap_ = {};
-
-  /// A converter used to convert Substrait plan into Velox's plan node.
-  SubstraitToVeloxPlanConverter planConverter_;
-
-  /// An expression converter used to convert Substrait representations into
-  /// Velox expressions.
-  SubstraitVeloxExprConverter* exprConverter_ = nullptr;
-
-  std::vector<std::string> validateLog_;
-
   /// Used to get types from advanced extension and validate them, then convert to a Velox type that has arbitrary
   /// levels of nesting.
   bool parseVeloxType(const ::substrait::extensions::AdvancedExtension& extension, TypePtr& out);
@@ -156,6 +138,24 @@ class SubstraitToVeloxPlanValidator {
   void logValidateMsg(const std::string& log) {
     validateLog_.emplace_back(log);
   }
+
+  /// A memory pool used for function validation.
+  memory::MemoryPool* pool_;
+
+  /// An execution context used for function validation.
+  core::ExecCtx* execCtx_;
+
+  // Unused customized conf map.
+  std::unordered_map<std::string, std::string> confMap_ = {};
+
+  /// A converter used to convert Substrait plan into Velox's plan node.
+  SubstraitToVeloxPlanConverter planConverter_;
+
+  /// An expression converter used to convert Substrait representations into
+  /// Velox expressions.
+  SubstraitVeloxExprConverter* exprConverter_ = nullptr;
+
+  std::vector<std::string> validateLog_;
 };
 
 } // namespace gluten
