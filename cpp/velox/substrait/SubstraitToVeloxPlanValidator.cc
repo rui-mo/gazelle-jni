@@ -1091,6 +1091,12 @@ bool SubstraitToVeloxPlanValidator::validateAggRelFunctionType(const ::substrait
       return false;
     }
 
+    // Skip validating binding for functions whose result type cannot be resolved from intermediate type.
+    const auto outputType = SubstraitParser::parseType(aggFunction.output_type());
+    if (funcName == "avg_merge_extract" && outputType->isDecimal()) {
+      continue;
+    }
+
     bool resolved = false;
     for (const auto& signature : signaturesOpt.value()) {
       exec::SignatureBinder binder(*signature, types);
