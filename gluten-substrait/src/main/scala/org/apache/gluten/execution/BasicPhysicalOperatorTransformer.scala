@@ -17,6 +17,7 @@
 package org.apache.gluten.execution
 
 import org.apache.gluten.backendsapi.BackendsApiManager
+import org.apache.gluten.config.GlutenConfig
 import org.apache.gluten.exception.GlutenNotSupportException
 import org.apache.gluten.expression.{ExpressionConverter, ExpressionTransformer}
 import org.apache.gluten.extension.columnar.transition.Convention
@@ -120,6 +121,12 @@ abstract class FilterExecTransformerBase(val cond: Expression, val input: SparkP
   }
 
   override protected def doValidateInternal(): ValidationResult = {
+    val glutenConf: GlutenConfig = GlutenConfig.get
+    val scanOnly: Boolean = glutenConf.enableScanOnly
+    if (scanOnly && !child.isInstanceOf[BasicScanExecTransformer]) {
+      return ValidationResult.failed("Filter should fallback with Scan")
+    }
+
     val remainingCondition = getRemainingCondition
     if (remainingCondition == null) {
       // All the filters can be pushed down and the computing of this Filter
