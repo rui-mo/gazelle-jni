@@ -130,6 +130,8 @@ class VeloxMetricsApi extends MetricsApi with Logging {
         "data source read time"),
       "skippedStrides" -> SQLMetrics.createMetric(sparkContext, "number of skipped row groups"),
       "processedStrides" -> SQLMetrics.createMetric(sparkContext, "number of processed row groups"),
+      "skippedPages" -> SQLMetrics.createMetric(sparkContext, "number of skipped pages"),
+      "processedPages" -> SQLMetrics.createMetric(sparkContext, "number of processed pages"),
       "remainingFilterTime" -> SQLMetrics.createNanoTimingMetric(
         sparkContext,
         "remaining filter time"),
@@ -181,6 +183,8 @@ class VeloxMetricsApi extends MetricsApi with Logging {
         "data source read time"),
       "skippedStrides" -> SQLMetrics.createMetric(sparkContext, "number of skipped row groups"),
       "processedStrides" -> SQLMetrics.createMetric(sparkContext, "number of processed row groups"),
+      "skippedPages" -> SQLMetrics.createMetric(sparkContext, "number of skipped pages"),
+      "processedPages" -> SQLMetrics.createMetric(sparkContext, "number of processed pages"),
       "remainingFilterTime" -> SQLMetrics.createNanoTimingMetric(
         sparkContext,
         "remaining filter time"),
@@ -232,6 +236,8 @@ class VeloxMetricsApi extends MetricsApi with Logging {
         "data source read time"),
       "skippedStrides" -> SQLMetrics.createMetric(sparkContext, "number of skipped row groups"),
       "processedStrides" -> SQLMetrics.createMetric(sparkContext, "number of processed row groups"),
+      "skippedPages" -> SQLMetrics.createMetric(sparkContext, "number of skipped pages"),
+      "processedPages" -> SQLMetrics.createMetric(sparkContext, "number of processed pages"),
       "remainingFilterTime" -> SQLMetrics.createNanoTimingMetric(
         sparkContext,
         "remaining filter time"),

@@ -47,6 +47,8 @@ class FileSourceScanMetricsUpdater(@transient val metrics: Map[String, SQLMetric
   val dataSourceReadTime: SQLMetric = metrics("dataSourceReadTime")
   val skippedStrides: SQLMetric = metrics("skippedStrides")
   val processedStrides: SQLMetric = metrics("processedStrides")
+  val skippedPages: SQLMetric = metrics("skippedPages")
+  val processedPages: SQLMetric = metrics("processedPages")
   val remainingFilterTime: SQLMetric = metrics("remainingFilterTime")
   val ioWaitTime: SQLMetric = metrics("ioWaitTime")
   val storageReadBytes: SQLMetric = metrics("storageReadBytes")
@@ -78,6 +80,8 @@ class FileSourceScanMetricsUpdater(@transient val metrics: Map[String, SQLMetric
       processedSplits += operatorMetrics.processedSplits
       skippedStrides += operatorMetrics.skippedStrides
       processedStrides += operatorMetrics.processedStrides
+      processedPages += operatorMetrics.processedPages
+      skippedPages += operatorMetrics.skippedPages
       remainingFilterTime += operatorMetrics.remainingFilterTime
       ioWaitTime += operatorMetrics.ioWaitTime
       storageReadBytes += operatorMetrics.storageReadBytes

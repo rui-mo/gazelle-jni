@@ -46,6 +46,8 @@ public class OperatorMetrics implements IOperatorMetrics {
   public long processedSplits;
   public long skippedStrides;
   public long processedStrides;
+  public long skippedPages;
+  public long processedPages;
   public long remainingFilterTime;
   public long ioWaitTime;
   public long storageReadBytes;
@@ -91,6 +93,8 @@ public class OperatorMetrics implements IOperatorMetrics {
       long scanTime,
       long skippedSplits,
       long processedSplits,
+      long skippedPages,
+      long processPages,
       long skippedStrides,
       long processedStrides,
       long remainingFilterTime,
@@ -131,10 +135,12 @@ public class OperatorMetrics implements IOperatorMetrics {
     this.flushRowCount = flushRowCount;
     this.loadedToValueHook = loadedToValueHook;
     this.bloomFilterBlocksByteSize = bloomFilterBlocksByteSize;
-    this.skippedSplits = skippedSplits;
-    this.processedSplits = processedSplits;
     this.skippedStrides = skippedStrides;
     this.processedStrides = processedStrides;
+    this.skippedSplits = skippedSplits;
+    this.processedSplits = processedSplits;
+    this.skippedPages = skippedPages;
+    this.processedPages = processPages;
     this.remainingFilterTime = remainingFilterTime;
     this.ioWaitTime = ioWaitTime;
     this.storageReadBytes = storageReadBytes;
